@@ -12,8 +12,8 @@ from typing import Set
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global download directory - use absolute path
-DOWNLOAD_DIRECTORY = '/app/download'
+# Global download directory
+DOWNLOAD_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'download')
 
 # Track files that should be deleted after download
 files_to_cleanup: Set[str] = set()
@@ -121,9 +121,7 @@ def download_file(filename):
             # Schedule cleanup after 5 minutes (adjust as needed)
             schedule_file_cleanup(file_path, delay=300)  # 5 minutes
             
-            return send_file(file_path, as_attachment=True, 
-                           as_attachment=True,
-                           download_name=filename)
+            return send_file(file_path, as_attachment=True)
         else:
             logger.error(f"File not found: {file_path}")
             return jsonify({'error': 'File not found!'}), 404
@@ -149,7 +147,6 @@ def health_check():
     return jsonify({
         'status': 'healthy', 
         'message': 'Climate Data Extraction API is running',
-        'domain': 'climatedata.indecol.no',
         'cleanup_status': cleanup_status
     })
 
