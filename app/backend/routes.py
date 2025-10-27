@@ -1,4 +1,4 @@
-from flask import request, jsonify, send_file, render_template
+from flask import request, jsonify, send_file, render_template # type: ignore
 import os
 import logging
 from backend.processing import extract_data
