@@ -7,7 +7,7 @@ import pandas as pd
 import regionmask
 import zipfile
 import logging
-from typing import Union, Optional
+from typing import Optional
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -20,11 +20,14 @@ def extract_data(country_name: str, variable: str, method: str, subregions: bool
         country_name = country_name.lower()
         logger.info(f"Processing data for {country_name}, variable: {variable}, method: {method}, subregions: {subregions}")
 
+        # Get absolute path to data directory
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        data_dir = os.path.join(project_root, 'data')
+        download_dir = os.path.join(project_root, 'download')
+
         # Load the world shapefile
-        gdf = gpd.read_file(
-            "./data/world_power_region.geojson",
-            engine="pyogrio",
-        )
+        shapefile_path = os.path.join(data_dir, "world_power_region.geojson")
+        gdf = gpd.read_file(shapefile_path, engine="pyogrio")
 
         # Find the country polygon by case-insensitive match
         country_gdf = gdf[gdf["countryName"].str.lower() == country_name]
@@ -33,7 +36,7 @@ def extract_data(country_name: str, variable: str, method: str, subregions: bool
             raise ValueError(f"Country '{country_name}' not found in the shapefile.")
 
         # Load the appropriate NetCDF dataset based on the variable
-        dataset_path = f"./data/{variable}_{method}.nc"
+        dataset_path = os.path.join(data_dir, f"{variable}_{method}.nc")
 
         if not os.path.exists(dataset_path):
             raise FileNotFoundError(f"Dataset not found at {dataset_path}")
@@ -43,15 +46,15 @@ def extract_data(country_name: str, variable: str, method: str, subregions: bool
         logger.info(f"Loaded dataset with dimensions: {dict(ds.dims)}")
 
         if subregions:
-            return _process_subregions(country_name, variable, method, country_gdf, ds)
+            return _process_subregions(country_name, variable, method, country_gdf, ds, download_dir)
         else:
-            return _process_whole_country(country_name, variable, method, country_gdf, ds)
+            return _process_whole_country(country_name, variable, method, country_gdf, ds, download_dir)
 
     except Exception as e:
         logger.error(f"Error in extract_data: {str(e)}")
         raise
 
-def _process_subregions(country_name: str, variable: str, method: str, country_gdf: gpd.GeoDataFrame, ds: xr.Dataset) -> str:
+def _process_subregions(country_name: str, variable: str, method: str, country_gdf: gpd.GeoDataFrame, ds: xr.Dataset, download_dir: str) -> str:
     """Process data for subregions."""
     output_files = []
     
@@ -79,7 +82,7 @@ def _process_subregions(country_name: str, variable: str, method: str, country_g
             df = _create_dataframe(data_in_subregion, variable, country_name, zone)
             
             # Save results to CSV
-            output_directory = f"./download/{country_name}/"
+            output_directory = os.path.join(download_dir, country_name)
             os.makedirs(output_directory, exist_ok=True)
             output_file = f"{country_name}_{zone}_{variable}_{method}.csv"
             output_path = os.path.join(output_directory, output_file)
@@ -96,7 +99,7 @@ def _process_subregions(country_name: str, variable: str, method: str, country_g
         raise ValueError("No valid subregions were processed successfully.")
 
     # Create zip file
-    zip_file_path = f"./download/{country_name}_{variable}_{method}.zip"
+    zip_file_path = os.path.join(download_dir, f"{country_name}_{variable}_{method}.zip")
     
     with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for file_path in output_files:
@@ -107,7 +110,7 @@ def _process_subregions(country_name: str, variable: str, method: str, country_g
     
     return zip_file_path
 
-def _process_whole_country(country_name: str, variable: str, method: str, country_gdf: gpd.GeoDataFrame, ds: xr.Dataset) -> str:
+def _process_whole_country(country_name: str, variable: str, method: str, country_gdf: gpd.GeoDataFrame, ds: xr.Dataset, download_dir: str) -> str:
     """Process data for whole country."""
     # Apply the mask to the dataset
     country_shape = country_gdf.geometry.values[0]
@@ -125,7 +128,7 @@ def _process_whole_country(country_name: str, variable: str, method: str, countr
     df = _create_dataframe(data_in_country, variable, country_name)
 
     # Save results to CSV
-    output_directory = "./download/"
+    output_directory = download_dir
     os.makedirs(output_directory, exist_ok=True)
     output_file = f"{country_name}_{variable}_{method}.csv"
     output_path = os.path.join(output_directory, output_file)

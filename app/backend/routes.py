@@ -1,8 +1,8 @@
 from flask import request, jsonify, send_file, render_template
 import os
 import logging
-from app.processing import extract_data
-from app import app
+from backend.processing import extract_data
+from backend import app
 import shutil
 import threading
 import time
@@ -12,8 +12,8 @@ from typing import Set
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global download directory
-DOWNLOAD_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'download')
+# Global download directory - use absolute path
+DOWNLOAD_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'download')
 
 # Track files that should be deleted after download
 files_to_cleanup: Set[str] = set()
@@ -34,7 +34,7 @@ def clean_download_directory():
         logger.error(f"Error cleaning download directory: {str(e)}")
         raise
 
-def schedule_file_cleanup(file_path: str, delay: int = 300):  # 5 minutes delay
+def schedule_file_cleanup(file_path: str, delay: int = 300):
     """Schedule a file for deletion after specified delay."""
     def cleanup():
         time.sleep(delay)
@@ -46,10 +46,7 @@ def schedule_file_cleanup(file_path: str, delay: int = 300):  # 5 minutes delay
         except Exception as e:
             logger.error(f"Error cleaning up file {file_path}: {str(e)}")
     
-    # Add to tracking set
     files_to_cleanup.add(file_path)
-    
-    # Start cleanup thread
     thread = threading.Thread(target=cleanup)
     thread.daemon = True
     thread.start()
@@ -57,14 +54,13 @@ def schedule_file_cleanup(file_path: str, delay: int = 300):  # 5 minutes delay
 @app.route('/')
 def index():
     """Render the main page."""
-    logger.info("Rendering index.html")
+    logger.info("Rendering index.html from frontend/templates/")
     return render_template('index.html')
 
 @app.route('/process', methods=['POST'])
 def process_data():
     """Process climate data extraction request."""
     try:
-        # Get request data
         data = request.get_json()
         if not data:
             return jsonify({'error': 'No JSON data provided'}), 400
@@ -74,7 +70,6 @@ def process_data():
         method = data.get('method')
         area = data.get('area')
 
-        # Validate required parameters
         if not all([country, variable, method, area]):
             return jsonify({'error': 'Country, variable, method, and area are required!'}), 400
 
@@ -118,10 +113,10 @@ def download_file(filename):
         logger.info(f"Attempting to serve file: {file_path}")
         
         if os.path.exists(file_path):
-            # Schedule cleanup after 5 minutes (adjust as needed)
-            schedule_file_cleanup(file_path, delay=300)  # 5 minutes
+            # Schedule cleanup after 5 minutes
+            schedule_file_cleanup(file_path, delay=300)
             
-            return send_file(file_path, as_attachment=True)
+            return send_file(file_path, as_attachment=True, download_name=filename)
         else:
             logger.error(f"File not found: {file_path}")
             return jsonify({'error': 'File not found!'}), 404
@@ -142,7 +137,7 @@ def manual_cleanup():
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint for Docker/load balancers."""
+    """Health check endpoint."""
     cleanup_status = f"{len(files_to_cleanup)} files scheduled for cleanup"
     return jsonify({
         'status': 'healthy', 
