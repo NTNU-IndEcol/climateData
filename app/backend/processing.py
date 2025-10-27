@@ -1,10 +1,11 @@
 import os
-import geopandas as gpd
+import geopandas as gpd # type: ignore
 import xarray as xr
-from rasterio.features import geometry_mask
+#import rasterio
+#from rasterio.features import geometry_mask
 import numpy as np
 import pandas as pd
-import regionmask
+import regionmask # type: ignore
 import zipfile
 import logging
 from typing import Optional
