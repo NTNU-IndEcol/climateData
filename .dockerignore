@@ -4,6 +4,7 @@ __pycache__
 *.pyd
 .Python
 env
+.env
 pip-log.txt
 pip-delete-this-directory.txt
 .tox
@@ -21,8 +22,7 @@ dmypy.json
 .idea
 .vscode
 .DS_Store
-data/*.nc
-data/*.geojson
-download/*
+data/
+download/
 !data/.gitkeep
 !download/.gitkeep

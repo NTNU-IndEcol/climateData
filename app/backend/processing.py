@@ -21,13 +21,15 @@ def extract_data(country_name: str, variable: str, method: str, subregions: bool
         country_name = country_name.lower()
         logger.info(f"Processing data for {country_name}, variable: {variable}, method: {method}, subregions: {subregions}")
 
-        # Get absolute path to data directory
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # Get absolute path to data directory - UPDATED PATH
+        # Go up two levels from backend to reach project root
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         data_dir = os.path.join(project_root, 'data')
         download_dir = os.path.join(project_root, 'download')
 
         # Load the world shapefile
         shapefile_path = os.path.join(data_dir, "world_power_region.geojson")
+        logger.info(f"Looking for shapefile at: {shapefile_path}")
         gdf = gpd.read_file(shapefile_path, engine="pyogrio")
 
         # Find the country polygon by case-insensitive match
@@ -38,6 +40,7 @@ def extract_data(country_name: str, variable: str, method: str, subregions: bool
 
         # Load the appropriate NetCDF dataset based on the variable
         dataset_path = os.path.join(data_dir, f"{variable}_{method}.nc")
+        logger.info(f"Looking for dataset at: {dataset_path}")
 
         if not os.path.exists(dataset_path):
             raise FileNotFoundError(f"Dataset not found at {dataset_path}")

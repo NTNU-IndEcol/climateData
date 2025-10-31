@@ -2,9 +2,10 @@ Flask
 geopandas
 xarray
 rasterio
-rioxarray
 numpy
 pandas
+netcdf4
+scipy
 regionmask
 pyogrio
 gunicorn

@@ -12,21 +12,35 @@ from typing import Set
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global download directory - use absolute path
-DOWNLOAD_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'download')
+# Global download directory - use absolute path - UPDATED PATH
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DOWNLOAD_DIRECTORY = os.path.join(project_root, 'download')
 
 # Track files that should be deleted after download
 files_to_cleanup: Set[str] = set()
 
 def clean_download_directory():
-    """Deletes the entire download directory and recreates it."""
+    """Deletes the contents of the download directory without removing the directory itself."""
     try:
         if os.path.exists(DOWNLOAD_DIRECTORY):
-            shutil.rmtree(DOWNLOAD_DIRECTORY)
-            logger.info(f"Deleted entire directory: {DOWNLOAD_DIRECTORY}")
-
-        os.makedirs(DOWNLOAD_DIRECTORY, exist_ok=True)
-        logger.info(f"Recreated directory: {DOWNLOAD_DIRECTORY}")
+            # Remove all files and subdirectories in download directory, but keep the directory itself
+            for filename in os.listdir(DOWNLOAD_DIRECTORY):
+                file_path = os.path.join(DOWNLOAD_DIRECTORY, filename)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.unlink(file_path)
+                        logger.info(f"Deleted file: {file_path}")
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)
+                        logger.info(f"Deleted directory: {file_path}")
+                except Exception as e:
+                    logger.error(f"Failed to delete {file_path}. Reason: {e}")
+            
+            logger.info(f"Cleaned contents of directory: {DOWNLOAD_DIRECTORY}")
+        else:
+            # If directory doesn't exist, create it
+            os.makedirs(DOWNLOAD_DIRECTORY, exist_ok=True)
+            logger.info(f"Created directory: {DOWNLOAD_DIRECTORY}")
         
         # Clear the cleanup tracking
         files_to_cleanup.clear()
@@ -43,6 +57,18 @@ def schedule_file_cleanup(file_path: str, delay: int = 300):
                 os.remove(file_path)
                 logger.info(f"Cleaned up file: {file_path}")
                 files_to_cleanup.discard(file_path)
+                
+                # Also clean up any empty country subdirectories
+                file_dir = os.path.dirname(file_path)
+                if file_dir != DOWNLOAD_DIRECTORY:  # Only clean subdirectories, not the main download dir
+                    try:
+                        # Remove directory if empty
+                        if os.path.exists(file_dir) and not os.listdir(file_dir):
+                            os.rmdir(file_dir)
+                            logger.info(f"Removed empty directory: {file_dir}")
+                    except OSError:
+                        pass  # Directory not empty or other issue - that's fine
+                        
         except Exception as e:
             logger.error(f"Error cleaning up file {file_path}: {str(e)}")
     
