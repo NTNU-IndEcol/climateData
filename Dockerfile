@@ -32,7 +32,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create necessary directories
-RUN mkdir -p  download
+# RUN mkdir -p  download
 
 # Expose port
 EXPOSE 5000
