@@ -5,7 +5,7 @@ A Dockerized web application for extracting climate data from NetCDF files based
 ## Features
 
 - Extract climate data for European countries
-- Support for multiple variables (t2m, ws10, ro, tcc, ssrd)
+- Support for multiple variables (t2m, ws10, ws100, ro, tcc, ssrd)
 - Multiple aggregation methods (daymean, daymax, daymin, daysum)
 - Whole country or power sub-region extraction
 - Percentile calculations and masking

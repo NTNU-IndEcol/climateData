@@ -16,6 +16,7 @@ Format: `data/{variable}/{variable}_{year}_{method}.nc`
 **Available Variables:**
 - `t2m` - 2-meter air temperature
 - `ws10` - 10-meter wind speed  
+- `ws100` - 100-meter wind speed
 - `ro` - Surface runoff
 - `tcc` - Total cloud cover
 - `ssrd` - Surface solar radiation
