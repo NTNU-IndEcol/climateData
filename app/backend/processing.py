@@ -1,4 +1,5 @@
 import os
+import re
 import geopandas as gpd # type: ignore
 import xarray as xr
 #import rasterio
@@ -13,6 +14,77 @@ from typing import Optional
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+YEARLY_DATASET_PATTERN = re.compile(
+    r"^(?P<variable>[A-Za-z0-9]+)_(?P<year>\d{4})_(?P<method>[A-Za-z0-9]+)\.nc$"
+)
+METHOD_ALIASES = {
+    "daymean": {"daymean", "dailymean"},
+    "dailymean": {"daymean", "dailymean"},
+    "daymax": {"daymax"},
+    "daymin": {"daymin"},
+    "daysum": {"daysum"},
+}
+
+
+def _load_variable_dataset(data_dir: str, variable: str, method: str) -> xr.Dataset:
+    """Load and concatenate yearly NetCDF files for a variable and aggregation method."""
+    variable_dir = os.path.join(data_dir, variable)
+    logger.info(f"Looking for yearly datasets in: {variable_dir}")
+
+    if not os.path.isdir(variable_dir):
+        raise FileNotFoundError(
+            f"Variable directory not found at {variable_dir}. Expected files like "
+            f"{variable}/{variable}_1994_{method}.nc"
+        )
+
+    accepted_methods = METHOD_ALIASES.get(method, {method})
+    matched_files = []
+    for filename in os.listdir(variable_dir):
+        match = YEARLY_DATASET_PATTERN.match(filename)
+        if (
+            not match
+            or match.group("variable") != variable
+            or match.group("method") not in accepted_methods
+        ):
+            continue
+
+        matched_files.append(
+            (int(match.group("year")), os.path.join(variable_dir, filename))
+        )
+
+    if not matched_files:
+        raise FileNotFoundError(
+            f"No dataset files found for variable '{variable}' and method '{method}' in {variable_dir}"
+        )
+
+    matched_files.sort(key=lambda item: item[0])
+    dataset_paths = [path for _, path in matched_files]
+    logger.info(f"Matched yearly dataset files: {dataset_paths}")
+
+    datasets = []
+    for dataset_path in dataset_paths:
+        ds = xr.open_dataset(dataset_path)
+        if variable not in ds.data_vars:
+            ds.close()
+            raise ValueError(
+                f"Variable '{variable}' not found in dataset {dataset_path}. "
+                f"Available variables: {list(ds.data_vars)}"
+            )
+        datasets.append(ds)
+
+    try:
+        if len(datasets) == 1:
+            combined = datasets[0]
+        else:
+            combined = xr.concat(datasets, dim="time").sortby("time")
+
+        logger.info(f"Loaded combined dataset with dimensions: {dict(combined.dims)}")
+        return combined
+    except Exception:
+        for ds in datasets:
+            ds.close()
+        raise
 
 def extract_data(country_name: str, variable: str, method: str, subregions: bool = False) -> str:
     """Extract and mask data based on country name and variable."""
@@ -38,16 +110,8 @@ def extract_data(country_name: str, variable: str, method: str, subregions: bool
         if country_gdf.empty:
             raise ValueError(f"Country '{country_name}' not found in the shapefile.")
 
-        # Load the appropriate NetCDF dataset based on the variable
-        dataset_path = os.path.join(data_dir, f"{variable}_{method}.nc")
-        logger.info(f"Looking for dataset at: {dataset_path}")
-
-        if not os.path.exists(dataset_path):
-            raise FileNotFoundError(f"Dataset not found at {dataset_path}")
-        
-        # Open dataset with proper error handling
-        ds = xr.open_dataset(dataset_path)
-        logger.info(f"Loaded dataset with dimensions: {dict(ds.dims)}")
+        # Load all yearly NetCDF files for the selected variable and method
+        ds = _load_variable_dataset(data_dir, variable, method)
 
         if subregions:
             return _process_subregions(country_name, variable, method, country_gdf, ds, download_dir)

@@ -28,7 +28,23 @@ cd climate-data-app
 mkdir -p data
 mkdir -p download
 ```
-upload the dat files to the data/ directory. 
+Place `world_power_region.geojson` in `data/`, then create one folder per variable and put one NetCDF file per year inside it. Example:
+
+```text
+data/
+  world_power_region.geojson
+  tcc/
+    tcc_1994_dailymean.nc
+    tcc_1994_daymax.nc
+    tcc_1994_daymin.nc
+    tcc_2000_dailymean.nc
+    ...
+  t2m/
+    t2m_1994_dailymean.nc
+    ...
+```
+
+`daymean` files may also be named `dailymean`; the backend accepts both.
 
 3. Run with Docker
 ```bash

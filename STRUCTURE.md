@@ -3,7 +3,13 @@ climateData-app/
 ├── docker-compose.yml      
 ├── data/
 │   ├── world_power_region.geojson
-│   ├── variable1_method1.nc
+│   ├── tcc/
+│   │   ├── tcc_1994_dailymean.nc
+│   │   ├── tcc_1994_daymax.nc
+│   │   └── ...
+│   ├── t2m/
+│   │   ├── t2m_1994_daymean.nc
+│   │   └── ...
 │   └── ...
 ├── download/
 ├── app/
