@@ -48,7 +48,7 @@ def clean_download_directory():
         logger.error(f"Error cleaning download directory: {str(e)}")
         raise
 
-def schedule_file_cleanup(file_path: str, delay: int = 300):
+def schedule_file_cleanup(file_path: str, delay: int = 3600):
     """Schedule a file for deletion after specified delay."""
     def cleanup():
         time.sleep(delay)
@@ -139,8 +139,8 @@ def download_file(filename):
         logger.info(f"Attempting to serve file: {file_path}")
         
         if os.path.exists(file_path):
-            # Schedule cleanup after 5 minutes
-            schedule_file_cleanup(file_path, delay=300)
+            # Schedule cleanup after 1 hour
+            schedule_file_cleanup(file_path, delay=3600)
             
             return send_file(file_path, as_attachment=True, download_name=filename)
         else:
